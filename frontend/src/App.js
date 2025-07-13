@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Copy, Check, Lightbulb, Target, MessageSquare, Settings, TrendingUp, BarChart3, Users, Edit3, Plus, Trash2, Save, X } from 'lucide-react';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 // Icon mapping for dynamic icons
