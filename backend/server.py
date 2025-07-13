@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime
 
@@ -34,6 +34,43 @@ class StatusCheck(BaseModel):
 
 class StatusCheckCreate(BaseModel):
     client_name: str
+
+# Use Case Management Models
+class UseCase(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    template: str
+    example: str
+
+class UseCaseCreate(BaseModel):
+    name: str
+    template: str
+    example: str
+
+class UseCaseUpdate(BaseModel):
+    name: Optional[str] = None
+    template: Optional[str] = None
+    example: Optional[str] = None
+
+class Category(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    icon: str
+    color: str
+    example: str
+    use_cases: List[UseCase] = []
+
+class CategoryCreate(BaseModel):
+    name: str
+    icon: str
+    color: str
+    example: str
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    example: Optional[str] = None
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
