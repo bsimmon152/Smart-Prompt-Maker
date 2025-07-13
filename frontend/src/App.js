@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { Copy, Check, Lightbulb, Target, MessageSquare, Settings, TrendingUp, BarChart3, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { Copy, Check, Lightbulb, Target, MessageSquare, Settings, TrendingUp, BarChart3, Users, Edit3, Plus, Trash2, Save, X } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+// Icon mapping for dynamic icons
+const iconMap = {
+  Target,
+  MessageSquare,
+  Settings,
+  TrendingUp,
+  BarChart3,
+  Users
+};
 
 const SmartPromptWriter = () => {
   const [businessProfile, setBusinessProfile] = useState({
@@ -11,417 +26,14 @@ const SmartPromptWriter = () => {
     businessSize: ''
   });
   
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedUseCase, setSelectedUseCase] = useState('');
   const [showUseCases, setShowUseCases] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [copied, setCopied] = useState(false);
   const [showBestPractices, setShowBestPractices] = useState(false);
-
-  const categories = [
-    { id: 'marketing', name: 'Marketing Copy', icon: Target, color: 'bg-blue-500' },
-    { id: 'customer-service', name: 'Customer Service', icon: MessageSquare, color: 'bg-green-500' },
-    { id: 'process', name: 'Process Optimization', icon: Settings, color: 'bg-purple-500' },
-    { id: 'sales', name: 'Sales Outreach', icon: TrendingUp, color: 'bg-orange-500' },
-    { id: 'social', name: 'Social Media', icon: Users, color: 'bg-pink-500' },
-    { id: 'planning', name: 'Business Planning', icon: BarChart3, color: 'bg-indigo-500' }
-  ];
-
-  const promptTemplates = {
-    marketing: {
-      useCases: [
-        {
-          name: "Website Homepage Copy",
-          template: `Create compelling homepage copy for ${businessProfile.businessName}, a ${businessProfile.industry} business targeting ${businessProfile.targetAudience}. 
-
-Key product/service: ${businessProfile.mainProduct}
-Main challenge to address: ${businessProfile.keyChallenge}
-Business size: ${businessProfile.businessSize}
-
-Please create homepage copy that:
-- Captures attention with a strong headline
-- Clearly explains what we do and who we serve
-- Highlights our unique value proposition
-- Includes social proof elements
-- Has a clear call-to-action above the fold
-- Addresses common objections
-
-Format: Provide headline, subheadline, main sections, and CTA button text.`,
-          example: "Great for creating your main website homepage that converts visitors into customers"
-        },
-        {
-          name: "Email Marketing Campaign",
-          template: `Create an email marketing campaign for ${businessProfile.businessName}, a ${businessProfile.industry} business targeting ${businessProfile.targetAudience}.
-
-Key product/service: ${businessProfile.mainProduct}
-Main challenge to address: ${businessProfile.keyChallenge}
-Business size: ${businessProfile.businessSize}
-
-Please create a 3-email sequence that:
-- Builds trust and provides value
-- Addresses our target audience's pain points
-- Gradually introduces our solution
-- Includes compelling subject lines
-- Has clear calls-to-action in each email
-
-Format: Provide subject lines, email content, and timing recommendations.`,
-          example: "Perfect for nurturing leads and converting them into paying customers"
-        },
-        {
-          name: "Social Media Ads",
-          template: `Create social media ad copy for ${businessProfile.businessName}, a ${businessProfile.industry} business targeting ${businessProfile.targetAudience}.
-
-Key product/service: ${businessProfile.mainProduct}
-Main challenge to address: ${businessProfile.keyChallenge}
-Business size: ${businessProfile.businessSize}
-
-Please create ad variations for:
-- Facebook/Instagram ads (different lengths)
-- LinkedIn ads (professional tone)
-- Ad headlines and descriptions
-- Multiple hooks to test
-- Clear value propositions
-- Strong calls-to-action
-
-Format: Provide multiple ad variations with explanations of target audience fit.`,
-          example: "Ideal for creating high-converting social media advertisements"
-        }
-      ],
-      example: "Perfect for creating website copy, email campaigns, or ad content that converts"
-    },
-    'customer-service': {
-      useCases: [
-        {
-          name: "Customer Complaint Resolution",
-          template: `Help me create customer complaint resolution templates for ${businessProfile.businessName}, a ${businessProfile.industry} business serving ${businessProfile.targetAudience}.
-
-Business context:
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please create templates for:
-- Acknowledging the complaint professionally
-- Investigating and gathering information
-- Providing solutions and alternatives
-- Following up to ensure satisfaction
-- Preventing similar issues in the future
-
-Include specific phrases that show empathy while maintaining professionalism. Provide templates for both email and phone conversations.`,
-          example: "Essential for handling customer complaints professionally and maintaining relationships"
-        },
-        {
-          name: "FAQ and Support Responses",
-          template: `Create comprehensive FAQ responses for ${businessProfile.businessName}, a ${businessProfile.industry} business serving ${businessProfile.targetAudience}.
-
-Business context:
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me create:
-- Answers to the top 10 most common customer questions
-- Clear, helpful responses that reduce back-and-forth
-- Proactive information that prevents issues
-- Escalation procedures for complex questions
-- Templates for different communication channels (email, chat, phone)
-
-Focus on being helpful while reducing support workload.`,
-          example: "Perfect for creating self-service resources and consistent support responses"
-        },
-        {
-          name: "Customer Onboarding Sequence",
-          template: `Design a customer onboarding sequence for ${businessProfile.businessName}, a ${businessProfile.industry} business serving ${businessProfile.targetAudience}.
-
-Business context:
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please create an onboarding sequence that:
-- Welcomes new customers warmly
-- Sets clear expectations
-- Provides step-by-step guidance
-- Anticipates and addresses common questions
-- Includes check-in points and success milestones
-- Encourages engagement and feedback
-
-Format as a series of communications (emails, calls, materials) with timing recommendations.`,
-          example: "Great for ensuring new customers have a smooth start and become long-term clients"
-        }
-      ],
-      example: "Great for building response templates, training materials, and customer communication strategies"
-    },
-    process: {
-      useCases: [
-        {
-          name: "Standard Operating Procedures (SOPs)",
-          template: `Create standard operating procedures for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Current situation:
-- Business type: ${businessProfile.industry}
-- Target market: ${businessProfile.targetAudience}
-- Main offering: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me create SOPs for:
-- Core business processes (specify which ones)
-- Step-by-step procedures that anyone can follow
-- Quality checkpoints and standards
-- Common troubleshooting scenarios
-- Training materials for new team members
-
-Format as clear, actionable procedures with checklists and visual flow charts where helpful.`,
-          example: "Essential for creating consistent processes and training new team members"
-        },
-        {
-          name: "Workflow Automation Analysis",
-          template: `Analyze automation opportunities for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Current situation:
-- Business type: ${businessProfile.industry}
-- Target market: ${businessProfile.targetAudience}
-- Main offering: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me:
-- Identify repetitive tasks that can be automated
-- Recommend specific tools and software solutions
-- Create implementation roadmaps with priorities
-- Calculate potential time and cost savings
-- Suggest workflows that connect different systems
-
-Focus on practical, budget-friendly automation that provides immediate ROI.`,
-          example: "Perfect for identifying time-saving automation opportunities and tool recommendations"
-        },
-        {
-          name: "Quality Control Systems",
-          template: `Develop quality control systems for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Current situation:
-- Business type: ${businessProfile.industry}
-- Target market: ${businessProfile.targetAudience}
-- Main offering: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me create:
-- Quality standards and benchmarks
-- Inspection checklists and procedures
-- Customer satisfaction measurement systems
-- Error prevention protocols
-- Continuous improvement processes
-
-Provide specific metrics to track and methods to maintain consistency across all operations.`,
-          example: "Great for ensuring consistent quality and customer satisfaction"
-        }
-      ],
-      example: "Ideal for streamlining operations, creating SOPs, and identifying automation opportunities"
-    },
-    sales: {
-      useCases: [
-        {
-          name: "Cold Email Outreach",
-          template: `Create cold email outreach templates for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Business details:
-- Target audience: ${businessProfile.targetAudience}
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge we solve: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please create a cold email sequence that includes:
-- Attention-grabbing subject lines
-- Personalized opening lines
-- Clear value proposition
-- Social proof elements
-- Compelling calls-to-action
-- Follow-up email templates (3-4 emails)
-
-Focus on building relationships rather than being pushy. Include personalization strategies and timing recommendations.`,
-          example: "Perfect for reaching new prospects and building your sales pipeline"
-        },
-        {
-          name: "Sales Call Scripts",
-          template: `Develop sales call scripts for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Business details:
-- Target audience: ${businessProfile.targetAudience}
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge we solve: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please create scripts for:
-- Cold calling introduction
-- Discovery questions to understand needs
-- Presentation of our solution
-- Handling common objections
-- Closing techniques
-- Follow-up call strategies
-
-Include conversation flow guides and tips for building rapport over the phone.`,
-          example: "Essential for phone-based sales and converting leads into customers"
-        },
-        {
-          name: "Sales Funnel Optimization",
-          template: `Optimize the sales funnel for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Business details:
-- Target audience: ${businessProfile.targetAudience}
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge we solve: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me analyze and improve:
-- Lead generation strategies
-- Lead qualification processes
-- Nurturing sequences for different prospect types
-- Conversion optimization at each stage
-- Sales metrics and KPIs to track
-- Follow-up systems for lost opportunities
-
-Provide specific recommendations for each stage of the funnel with implementation steps.`,
-          example: "Great for improving conversion rates and maximizing revenue from existing traffic"
-        }
-      ],
-      example: "Perfect for creating email sequences, cold outreach scripts, and sales funnel content"
-    },
-    social: {
-      useCases: [
-        {
-          name: "Content Calendar Planning",
-          template: `Create a monthly content calendar for ${businessProfile.businessName}, a ${businessProfile.industry} business targeting ${businessProfile.targetAudience}.
-
-Business context:
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge we address: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please create a 30-day content calendar that includes:
-- Mix of educational, promotional, and engaging content
-- Platform-specific content for [specify platforms]
-- Trending topics relevant to our industry
-- Behind-the-scenes content ideas
-- User-generated content opportunities
-- Seasonal or timely content hooks
-
-Format as a calendar with post ideas, optimal posting times, and content types for each day.`,
-          example: "Perfect for planning consistent, engaging social media content that builds your brand"
-        },
-        {
-          name: "Social Media Post Templates",
-          template: `Create social media post templates for ${businessProfile.businessName}, a ${businessProfile.industry} business targeting ${businessProfile.targetAudience}.
-
-Business context:
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge we address: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please create templates for:
-- Educational posts that provide value
-- Promotional posts that don't feel salesy
-- Behind-the-scenes content
-- Customer testimonial features
-- Question posts that encourage engagement
-- Trending topic responses
-
-Include hooks, body text, and call-to-action examples for each template type.`,
-          example: "Great for creating consistent, on-brand posts that engage your audience"
-        },
-        {
-          name: "Social Media Advertising",
-          template: `Develop social media advertising strategy for ${businessProfile.businessName}, a ${businessProfile.industry} business targeting ${businessProfile.targetAudience}.
-
-Business context:
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge we address: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me create:
-- Targeted ad campaigns for different objectives (awareness, leads, sales)
-- Audience targeting strategies
-- Ad creative ideas and copy variations
-- Landing page alignment recommendations
-- Budget allocation suggestions
-- Performance tracking metrics
-
-Focus on cost-effective campaigns that generate measurable results.`,
-          example: "Essential for running profitable social media ad campaigns that drive business results"
-        }
-      ],
-      example: "Great for content calendars, post templates, and engagement strategies across platforms"
-    },
-    planning: {
-      useCases: [
-        {
-          name: "90-Day Growth Plan",
-          template: `Create a 90-day growth plan for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Current business details:
-- Target market: ${businessProfile.targetAudience}
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me develop a detailed 90-day plan that includes:
-- Specific growth goals and targets
-- Week-by-week action items
-- Marketing and sales initiatives
-- Operational improvements needed
-- Key metrics to track progress
-- Resource requirements and budget considerations
-
-Focus on achievable, measurable goals with clear deadlines and accountability measures.`,
-          example: "Perfect for creating focused, actionable growth plans with clear milestones"
-        },
-        {
-          name: "Financial Planning & Budgeting",
-          template: `Help me create a financial plan for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Current business details:
-- Target market: ${businessProfile.targetAudience}
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me develop:
-- Monthly and quarterly budget forecasts
-- Revenue projections and growth scenarios
-- Cost analysis and expense optimization
-- Cash flow management strategies
-- Investment priorities and ROI calculations
-- Financial KPIs to monitor business health
-
-Provide practical templates and frameworks for ongoing financial management.`,
-          example: "Essential for managing business finances and making data-driven investment decisions"
-        },
-        {
-          name: "Market Analysis & Competitive Strategy",
-          template: `Conduct market analysis for ${businessProfile.businessName}, a ${businessProfile.industry} business.
-
-Current business details:
-- Target market: ${businessProfile.targetAudience}
-- Main product/service: ${businessProfile.mainProduct}
-- Key challenge: ${businessProfile.keyChallenge}
-- Business size: ${businessProfile.businessSize}
-
-Please help me analyze:
-- Target market size and growth potential
-- Competitive landscape and positioning
-- Market trends and opportunities
-- Customer behavior and preferences
-- Pricing strategies and value proposition
-- Market entry or expansion strategies
-
-Provide actionable insights and strategic recommendations based on the analysis.`,
-          example: "Great for understanding your market position and identifying growth opportunities"
-        }
-      ],
-      example: "Perfect for strategic planning, financial forecasting, and growth strategy development"
-    }
-  };
 
   const bestPractices = [
     {
@@ -450,6 +62,32 @@ Provide actionable insights and strategic recommendations based on the analysis.
     }
   ];
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API}/categories`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Fallback to empty array or show error message
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const interpolateTemplate = (template, profile) => {
+    return template
+      .replace(/\{businessName\}/g, profile.businessName || '[Your Business Name]')
+      .replace(/\{industry\}/g, profile.industry || '[Your Industry]')
+      .replace(/\{targetAudience\}/g, profile.targetAudience || '[Your Target Audience]')
+      .replace(/\{mainProduct\}/g, profile.mainProduct || '[Your Main Product/Service]')
+      .replace(/\{keyChallenge\}/g, profile.keyChallenge || '[Your Key Challenge]')
+      .replace(/\{businessSize\}/g, profile.businessSize || '[Your Business Size]');
+  };
+
   const handleGeneratePrompt = (categoryId, useCaseIndex = null) => {
     if (!businessProfile.businessName || !businessProfile.industry) {
       alert('Please fill in at least your business name and industry before generating a prompt.');
@@ -459,10 +97,14 @@ Provide actionable insights and strategic recommendations based on the analysis.
     setSelectedCategory(categoryId);
     
     if (useCaseIndex !== null) {
-      const useCase = promptTemplates[categoryId].useCases[useCaseIndex];
-      setGeneratedPrompt(useCase.template);
-      setSelectedUseCase(useCase.name);
-      setShowUseCases(false);
+      const category = categories.find(c => c.id === categoryId);
+      const useCase = category?.use_cases[useCaseIndex];
+      if (useCase) {
+        const interpolatedTemplate = interpolateTemplate(useCase.template, businessProfile);
+        setGeneratedPrompt(interpolatedTemplate);
+        setSelectedUseCase(useCase.name);
+        setShowUseCases(false);
+      }
     } else {
       setShowUseCases(true);
       setGeneratedPrompt('');
@@ -484,12 +126,38 @@ Provide actionable insights and strategic recommendations based on the analysis.
     }));
   };
 
+  const getIconComponent = (iconName) => {
+    return iconMap[iconName] || Target;
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading categories...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Smart Prompt Writer</h1>
           <p className="text-gray-600">Generate AI prompts tailored to your small business needs</p>
+          <div className="mt-4">
+            <Link 
+              to="/admin" 
+              className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors text-sm"
+            >
+              <Edit3 className="w-4 h-4" />
+              Admin Panel
+            </Link>
+          </div>
         </div>
 
         {/* Business Profile Section */}
@@ -592,23 +260,32 @@ Provide actionable insights and strategic recommendations based on the analysis.
         {/* Categories Section */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Choose Your Prompt Category</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleGeneratePrompt(category.id)}
-                className="p-6 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 text-left group"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-md ${category.color} text-white group-hover:scale-110 transition-transform`}>
-                    <category.icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-semibold text-gray-800">{category.name}</h3>
-                </div>
-                <p className="text-sm text-gray-600">{promptTemplates[category.id].example}</p>
-              </button>
-            ))}
-          </div>
+          {categories.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No categories available. Please add categories in the admin panel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map((category) => {
+                const IconComponent = getIconComponent(category.icon);
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleGeneratePrompt(category.id)}
+                    className="p-6 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-md ${category.color} text-white group-hover:scale-110 transition-transform`}>
+                        <IconComponent className="w-5 h-5" />
+                      </div>
+                      <h3 className="font-semibold text-gray-800">{category.name}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">{category.example}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Use Cases Dropdown */}
@@ -618,7 +295,7 @@ Provide actionable insights and strategic recommendations based on the analysis.
               Choose a specific use case for {categories.find(c => c.id === selectedCategory)?.name}:
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {promptTemplates[selectedCategory].useCases.map((useCase, index) => (
+              {categories.find(c => c.id === selectedCategory)?.use_cases.map((useCase, index) => (
                 <button
                   key={index}
                   onClick={() => handleGeneratePrompt(selectedCategory, index)}
@@ -665,8 +342,512 @@ Provide actionable insights and strategic recommendations based on the analysis.
   );
 };
 
+// Admin Panel Component
+const AdminPanel = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingUseCase, setEditingUseCase] = useState(null);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showAddUseCase, setShowAddUseCase] = useState(null);
+
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    icon: 'Target',
+    color: 'bg-blue-500',
+    example: ''
+  });
+
+  const [useCaseForm, setUseCaseForm] = useState({
+    name: '',
+    template: '',
+    example: ''
+  });
+
+  const iconOptions = ['Target', 'MessageSquare', 'Settings', 'TrendingUp', 'BarChart3', 'Users'];
+  const colorOptions = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-purple-500',
+    'bg-orange-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-red-500',
+    'bg-yellow-500'
+  ];
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/categories`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/categories`, categoryForm);
+      fetchCategories();
+      setShowAddCategory(false);
+      setCategoryForm({ name: '', icon: 'Target', color: 'bg-blue-500', example: '' });
+    } catch (error) {
+      console.error('Error adding category:', error);
+      alert('Error adding category. Please try again.');
+    }
+  };
+
+  const handleEditCategory = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/admin/categories/${editingCategory.id}`, editingCategory);
+      fetchCategories();
+      setEditingCategory(null);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      alert('Error updating category. Please try again.');
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    if (window.confirm('Are you sure you want to delete this category? This will also delete all its use cases.')) {
+      try {
+        await axios.delete(`${API}/admin/categories/${categoryId}`);
+        fetchCategories();
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        alert('Error deleting category. Please try again.');
+      }
+    }
+  };
+
+  const handleAddUseCase = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/categories/${showAddUseCase}/use-cases`, useCaseForm);
+      fetchCategories();
+      setShowAddUseCase(null);
+      setUseCaseForm({ name: '', template: '', example: '' });
+    } catch (error) {
+      console.error('Error adding use case:', error);
+      alert('Error adding use case. Please try again.');
+    }
+  };
+
+  const handleEditUseCase = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/admin/use-cases/${editingUseCase.id}`, editingUseCase);
+      fetchCategories();
+      setEditingUseCase(null);
+    } catch (error) {
+      console.error('Error updating use case:', error);
+      alert('Error updating use case. Please try again.');
+    }
+  };
+
+  const handleDeleteUseCase = async (useCaseId) => {
+    if (window.confirm('Are you sure you want to delete this use case?')) {
+      try {
+        await axios.delete(`${API}/admin/use-cases/${useCaseId}`);
+        fetchCategories();
+      } catch (error) {
+        console.error('Error deleting use case:', error);
+        alert('Error deleting use case. Please try again.');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading admin panel...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Panel</h1>
+          <p className="text-gray-600">Manage categories and use cases</p>
+          <div className="mt-4">
+            <Link 
+              to="/" 
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              ← Back to App
+            </Link>
+          </div>
+        </div>
+
+        {/* Add Category Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowAddCategory(true)}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Category
+          </button>
+        </div>
+
+        {/* Add Category Form */}
+        {showAddCategory && (
+          <div className="mb-8 p-6 bg-gray-50 rounded-lg border">
+            <h3 className="text-lg font-semibold mb-4">Add New Category</h3>
+            <form onSubmit={handleAddCategory} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name</label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
+                <select
+                  value={categoryForm.icon}
+                  onChange={(e) => setCategoryForm({...categoryForm, icon: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {iconOptions.map(icon => (
+                    <option key={icon} value={icon}>{icon}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                <select
+                  value={categoryForm.color}
+                  onChange={(e) => setCategoryForm({...categoryForm, color: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {colorOptions.map(color => (
+                    <option key={color} value={color}>{color}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Example Description</label>
+                <textarea
+                  value={categoryForm.example}
+                  onChange={(e) => setCategoryForm({...categoryForm, example: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Category
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCategory(false)}
+                  className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Categories List */}
+        <div className="space-y-6">
+          {categories.map((category) => (
+            <div key={category.id} className="border rounded-lg p-6 bg-gray-50">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-md ${category.color} text-white`}>
+                    {React.createElement(iconMap[category.icon] || Target, { className: "w-5 h-5" })}
+                  </div>
+                  <h3 className="text-lg font-semibold">{category.name}</h3>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingCategory(category)}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setShowAddUseCase(category.id)}
+                    className="flex items-center gap-2 bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Use Case
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(category.id)}
+                    className="flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors text-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 mb-4">{category.example}</p>
+              
+              {/* Use Cases */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-800">Use Cases:</h4>
+                {category.use_cases.map((useCase) => (
+                  <div key={useCase.id} className="bg-white p-4 rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h5 className="font-medium">{useCase.name}</h5>
+                        <p className="text-sm text-gray-600">{useCase.example}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingUseCase(useCase)}
+                          className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUseCase(useCase.id)}
+                          className="flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Use Case Form */}
+              {showAddUseCase === category.id && (
+                <div className="mt-4 p-4 bg-white rounded-lg border">
+                  <h4 className="font-medium mb-4">Add Use Case to {category.name}</h4>
+                  <form onSubmit={handleAddUseCase} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Use Case Name</label>
+                      <input
+                        type="text"
+                        value={useCaseForm.name}
+                        onChange={(e) => setUseCaseForm({...useCaseForm, name: e.target.value})}
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
+                      <textarea
+                        value={useCaseForm.template}
+                        onChange={(e) => setUseCaseForm({...useCaseForm, template: e.target.value})}
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows="8"
+                        placeholder="Use placeholders like {businessName}, {industry}, {targetAudience}, {mainProduct}, {keyChallenge}, {businessSize}"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Example Description</label>
+                      <textarea
+                        value={useCaseForm.example}
+                        onChange={(e) => setUseCaseForm({...useCaseForm, example: e.target.value})}
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows="2"
+                        required
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        <Save className="w-4 h-4" />
+                        Save Use Case
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddUseCase(null)}
+                        className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Edit Category Modal */}
+        {editingCategory && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">Edit Category</h3>
+              <form onSubmit={handleEditCategory} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category Name</label>
+                  <input
+                    type="text"
+                    value={editingCategory.name}
+                    onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
+                  <select
+                    value={editingCategory.icon}
+                    onChange={(e) => setEditingCategory({...editingCategory, icon: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {iconOptions.map(icon => (
+                      <option key={icon} value={icon}>{icon}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                  <select
+                    value={editingCategory.color}
+                    onChange={(e) => setEditingCategory({...editingCategory, color: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {colorOptions.map(color => (
+                      <option key={color} value={color}>{color}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Example Description</label>
+                  <textarea
+                    value={editingCategory.example}
+                    onChange={(e) => setEditingCategory({...editingCategory, example: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows="3"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory(null)}
+                    className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Use Case Modal */}
+        {editingUseCase && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              <h3 className="text-lg font-semibold mb-4">Edit Use Case</h3>
+              <form onSubmit={handleEditUseCase} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Use Case Name</label>
+                  <input
+                    type="text"
+                    value={editingUseCase.name}
+                    onChange={(e) => setEditingUseCase({...editingUseCase, name: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
+                  <textarea
+                    value={editingUseCase.template}
+                    onChange={(e) => setEditingUseCase({...editingUseCase, template: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows="8"
+                    placeholder="Use placeholders like {businessName}, {industry}, {targetAudience}, {mainProduct}, {keyChallenge}, {businessSize}"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Example Description</label>
+                  <textarea
+                    value={editingUseCase.example}
+                    onChange={(e) => setEditingUseCase({...editingUseCase, example: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows="2"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingUseCase(null)}
+                    className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
-  return <SmartPromptWriter />;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<SmartPromptWriter />} />
+        <Route path="/admin" element={<AdminPanel />} />
+      </Routes>
+    </Router>
+  );
 };
 
 export default App;
