@@ -152,19 +152,42 @@ class BackendAPITester:
         return self.run_test("Delete Category", "DELETE", f"api/admin/categories/{self.created_category_id}", 200)
 
 def main():
-    print("🚀 Starting Backend API Tests...")
-    print("=" * 50)
+    print("🚀 Starting Comprehensive Backend API Tests...")
+    print("=" * 60)
     
     # Setup
     tester = BackendAPITester()
     
-    # Test all endpoints
+    # Test basic endpoints
+    print("\n📋 BASIC API TESTS")
+    print("-" * 30)
     tester.test_root_endpoint()
     tester.test_create_status_check()
     tester.test_get_status_checks()
     
+    # Test use case management system
+    print("\n🏗️  USE CASE MANAGEMENT TESTS")
+    print("-" * 30)
+    tester.test_initialize_data()
+    tester.test_get_admin_categories()
+    tester.test_get_public_categories()
+    
+    # Test CRUD operations
+    print("\n🔧 CRUD OPERATIONS TESTS")
+    print("-" * 30)
+    tester.test_create_category()
+    tester.test_update_category()
+    tester.test_create_use_case()
+    tester.test_update_use_case()
+    
+    # Test deletion (cleanup)
+    print("\n🗑️  CLEANUP TESTS")
+    print("-" * 30)
+    tester.test_delete_use_case()
+    tester.test_delete_category()
+    
     # Print final results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     if tester.tests_passed == tester.tests_run:
